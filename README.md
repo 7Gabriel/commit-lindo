@@ -115,10 +115,6 @@ Ele checa, em ordem: Python em uso → biblioteca → API key → diff → chama
 
 ## Segurança
 
-- **Nunca** deixe a `ANTHROPIC_API_KEY` aparecer na tela. Faça o `export`/`$env:`
-  com o terminal fora do quadro, ou limpe a tela (`clear` / `cls`) depois.
-- Se uma chave já apareceu em qualquer lugar (tela, conversa, print),
-  **revogue-a** no console e gere outra.
 - Não commite a chave nem o `.venv/` — adicione ao `.gitignore`:
   ```
   .venv/
