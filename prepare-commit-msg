@@ -1,0 +1,95 @@
+#!D:/commit-lindo/.venv/Scripts/python.exe
+"""
+O POETA DOS COMMITS .
+Aponta direto para onde a lib
+anthropic está instalada. Assim o Git não precisa adivinhar qual Python usar.
+
+Instalar em:  .git/hooks/prepare-commit-msg   (sem extensão)
+"""
+import os
+import sys
+import subprocess
+
+def get_staged_diff() -> str:
+    try:
+        diff = subprocess.check_output(
+            ["git", "diff", "--cached", "--no-color"],
+            text=True, stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        return ""
+    return diff[:12000]
+
+def already_has_message(path: str) -> bool:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                s = line.strip()
+                if s and not s.startswith("#"):
+                    return True
+    except FileNotFoundError:
+        pass
+    return False
+
+def ask_ai(diff: str):
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    try:
+        import anthropic
+    except ImportError:
+        return None
+
+    prompt = (
+        "Você é um gerador de mensagens de commit. Analise o diff abaixo e "
+        "escreva UMA mensagem no padrão Conventional Commits.\n\n"
+        "Regras:\n"
+        "- Primeira linha: tipo(escopo): resumo no imperativo, em português, "
+        "até 72 caracteres. Tipos: feat, fix, refactor, docs, style, test, "
+        "chore, perf, build, ci.\n"
+        "- Se relevante, linha em branco e 1 a 3 bullets com '- ' explicando o porquê.\n"
+        "- Responda APENAS com a mensagem. Sem crases, sem markdown, sem explicação.\n\n"
+        f"Diff:\n{diff}"
+    )
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        return text.replace("```", "").strip() or None
+    except Exception:
+        return None
+
+def main():
+    if len(sys.argv) < 2:
+        return
+    msg_path = sys.argv[1]
+    source = sys.argv[2] if len(sys.argv) > 2 else ""
+
+    if source in ("merge", "squash", "commit", "message"):
+        return
+    if already_has_message(msg_path):
+        return
+
+    diff = get_staged_diff()
+    if not diff.strip():
+        return
+
+    message = ask_ai(diff)
+    if not message:
+        return
+
+    try:
+        with open(msg_path, "r", encoding="utf-8") as f:
+            original = f.read()
+    except FileNotFoundError:
+        original = ""
+
+    with open(msg_path, "w", encoding="utf-8") as f:
+        f.write(message + "\n\n" + original)
+
+if __name__ == "__main__":
+    main()
