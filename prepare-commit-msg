@@ -1,9 +1,5 @@
 #!D:/commit-lindo/.venv/Scripts/python.exe
 """
-O POETA DOS COMMITS .
-Aponta direto para onde a lib
-anthropic está instalada. Assim o Git não precisa adivinhar qual Python usar.
-
 Instalar em:  .git/hooks/prepare-commit-msg   (sem extensão)
 """
 import os
